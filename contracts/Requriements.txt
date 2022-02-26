@@ -1,0 +1,51 @@
+NFT contract name is "JungelTycoon"
+so you willl need to write staking contract and reward token contract  
+and then every holders could have their temp wallet
+staking pool will transfer the reward to the temp wallet
+and when the holder wants to withdraw the reward, then he will pay the gas fee
+no you will need to build all including dapp
+for now, lets make 3 durations
+2, 15, 30 days
+before the duration passed, stakers cannot claim their nfts
+reward token name: Jungle Tycoon Token
+symbol: $JTT
+
+
+
+Staking reward
+
+Normal Cubs
+Staking period         Rewards 
+45days               10 $JTT/per day
+30days               9 $JTT/per day
+15day               6.75 $JTT/per day
+7days                4.5$JTT/per day
+
+
+Royal Cubs
+Staking period         Rewards 
+45days               50 $JTT/per day
+30days               45 $JTT/per day
+15day               33.75 $JTT/per day
+7days                22.5$JTT/per day
+1token=$0.3
+
+
+
+
+Reference website and smart contract address.
+ - https://wolf.game/
+Users mint NFTs and stake it and then receive WOOL token reward.
+
+ - Sheep / Wolf NFT: 0xEB834ae72B30866af20a6ce5440Fa598BfAd3a42
+ - Barn / Gang Staking: 0x29205f257F9E3B78bcb27e253D0f3Fad9D7522a2
+ - $WOOL Token: 0x8355dbe8b0e275abad27eb843f3eaf3fc855e525
+
+
+
+
+
+
+
+
+
