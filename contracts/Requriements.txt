@@ -1,4 +1,6 @@
 NFT contract name is "JungelTycoon"
+https://etherscan.io/address/0xBCa44d867C707080c504F286C35b237D2802b7E5#code
+
 so you willl need to write staking contract and reward token contract  
 and then every holders could have their temp wallet
 staking pool will transfer the reward to the temp wallet
