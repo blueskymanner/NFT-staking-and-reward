@@ -1,5 +1,6 @@
 require('dotenv').config();
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
 require('hardhat-gas-reporter');
 
 // This is a sample Hardhat task. To learn how to create your own go to
@@ -79,5 +80,11 @@ module.exports = {
     localhost: {
       url: `http://127.0.0.1:8545`
     },
+  },
+
+  etherscan: {
+    // Your API key for Etherscan
+    // Obtain one at https://etherscan.io/
+    apiKey: process.env.ETHERSCAN_API_KEY
   },
 };

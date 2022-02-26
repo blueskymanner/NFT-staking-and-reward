@@ -10,7 +10,7 @@ async function main() {
   const JTT = await hre.ethers.getContractFactory("JTT");
   const Gallery = await hre.ethers.getContractFactory("Gallery");
   
-  const jungelTycoon = await JungelTycoon.deploy("JungelTycoon", "JT", "AE2QU4T", "H8YOP9WCV");
+  const jungelTycoon = await JungelTycoon.deploy("Jungle Tycoon Cub", "JTC", "ipfs://QmYao6yx2eWuLHtKHsbPpbqv51pv5mAqVQaFySq4VHzvGP", "ipfs://QmZCqJoQeWtA66JB24wiZ7qdtYPB4qNNd9s1iLw1x1oSQ2/hidden.json");
   console.log('JungelTycoon contract deployed at', jungelTycoon.address);
 
   const jTT = await (await JTT.deploy()).deployed();
