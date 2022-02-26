@@ -2652,7 +2652,7 @@ contract Gallery is Ownable, IERC721Receiver {
                         }
                     }
                     jungle.safeTransferFrom(address(this), _msgSender(), tokenIds[i], ""); // send back NFTs
-                    jtt.mint(_msgSender(), result);
+                    jtt.mint(_msgSender(), result/100);
                     // jtt.transferFrom(fromAddress, _msgSender(), result);
                     break;
                 }
