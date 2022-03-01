@@ -2571,7 +2571,7 @@ pragma solidity ^0.8.0;
 contract Gallery is Ownable, IERC721Receiver {
     
     // contract events
-    // event TokenStaked(address _account, uint256 _stackTime);
+    // event TokenStaked(address _account, uint256 _stakeTime);
     // event TokenUnstaked(address _account, uint256 _result);
 
     // reference to the JungelTycoon NFT contract
@@ -2580,12 +2580,14 @@ contract Gallery is Ownable, IERC721Receiver {
     // reference to the $JTT contract for minting $JTT earnings
     JTT jtt;
 
-    // maps tokenId to startTime to stack
-    mapping(uint256 => uint256) public stackTime;
+    // maps tokenId to startTime to stake
+    mapping(uint256 => uint256) public stakeTime;
 
-    // uint256 public JTTPerNFT = 0; 
-    // uint256[2][4] public unstackDate = [[7, 450], [15, 675], [30, 900], [45, 1000]];
-    uint256[][] public unstackDate = [[7, 450], [15, 675], [30, 900], [45, 1000]];
+    // maps tokenId to locking duration to stake
+    mapping(uint256 => uint256) public duration;
+
+    // uint256[2][4] public unstakeDate = [[7, 450], [15, 675], [30, 900], [45, 1000]];
+    uint256[][] public unstakeDate = [[7, 450], [15, 675], [30, 900], [45, 1000]];
 
     // uint256 public totalJTTEarned;
     // uint256 public unaccountedRewards = 0; 
@@ -2608,48 +2610,50 @@ contract Gallery is Ownable, IERC721Receiver {
     * @param account the address of the staker
     * @param tokenIds the IDs of the NFTs to stake
     */
-    function addToGallery(address account, uint16[] calldata tokenIds) external {
+    function addToGallery(address account, uint16[] calldata tokenIds, uint _duration) external {
         require(account == _msgSender() || _msgSender() == address(jungle), "DON'T GIVE YOUR TOKENS AWAY");
+        require(_duration >= 5 seconds, "Locking period should great than equal to 5 seconds.")
         for (uint i = 0; i < tokenIds.length; i++) {
             if (_msgSender() != address(jungle)) { // don't do this step if its a mint + stake
-                require(jungle.ownerOf(tokenIds[i]) == _msgSender(), "The token already stacked");
+                require(jungle.ownerOf(tokenIds[i]) == _msgSender(), "The token already staked");
                 jungle.transferFrom(_msgSender(), address(this), tokenIds[i]);
-                stackTime[i] = block.timestamp;
+                stakeTime[i] = block.timestamp;
+                duration[i] = _duration;
             } else if (tokenIds[i] == 0) {
                 continue; // there may be gaps in the array for stolen tokens
             }
         }
-        // emit TokenStaked(address account, uint256 stackTime);
+        // emit TokenStaked(address account, uint256 stakeTime);
     } 
 
-    /** CLAIMING / UNSTAKING
+    /** CLAIMING Reward/
     * @param tokenIds the IDs of the tokens to claim earnings from
     * @param unstake whether or not to unstake ALL of the tokens listed in tokenIds
     */
     function claimFromGallery(uint16[] calldata tokenIds, bool unstake) external {
         require(!(jungle.paused()), "CONTRACT STOPPED");
-        // unstackDate.push([7, 450]);
-        // unstackDate.push([15, 675]);
-        // unstackDate.push([30, 900]);
-        // unstackDate.push([45, 1000]);
+        // unstakeDate.push([7, 450]);
+        // unstakeDate.push([15, 675]);
+        // unstakeDate.push([30, 900]);
+        // unstakeDate.push([45, 1000]);
         if(unstake) {
             for (uint i = 0; i < tokenIds.length; i++) {
-                uint period = (block.timestamp - stackTime[i])/86400;
+                uint period = (block.timestamp - stakeTime[i])/86400;
                 uint result;
-                for(uint j = 0; j < unstackDate.length; j++) {
-                    if (period > unstackDate[j][0]) {
-                        if (j == unstackDate.length - 1) {
-                            result = period * unstackDate[j][1];
+                for(uint j = 0; j < unstakeDate.length; j++) {
+                    if (period > unstakeDate[j][0]) {
+                        if (j == unstakeDate.length - 1) {
+                            result = period * unstakeDate[j][1];
                         } else {
                             continue;
                         }
-                    } else if (period == unstackDate[j][0]) {
-                        result = period * unstackDate[j][1];
+                    } else if (period == unstakeDate[j][0]) {
+                        result = period * unstakeDate[j][1];
                     } else {
                         if (j == 0) {
                             break;
                         } else {
-                            result = period * unstackDate[j - 1][1];
+                            result = period * unstakeDate[j - 1][1];
                         }
                     }
                     jungle.safeTransferFrom(address(this), _msgSender(), tokenIds[i], ""); // send back NFTs
@@ -2660,6 +2664,15 @@ contract Gallery is Ownable, IERC721Receiver {
             }
         }   
         // emit TokenUnstaked(address account, uint256 result);
+    }
+
+    /** UNSTAKING /
+    * @param tokenIds the IDs of the tokens to claim earnings from
+    * @param unstake whether or not to unstake ALL of the tokens listed in tokenIds
+    */
+    function claimFromGallery(uint16[] calldata tokenIds, bool unstake) external {
+
+
     }
 
     // receive() external payable {}
