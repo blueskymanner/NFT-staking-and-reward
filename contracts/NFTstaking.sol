@@ -2611,6 +2611,7 @@ contract Gallery is Ownable, IERC721Receiver {
     * @param tokenIds the IDs of the NFTs to stake
     */
     function addToGallery(address account, uint16[] calldata tokenIds, uint _duration) external {
+        require(!(jungle.paused()), "CONTRACT STOPPED");
         require(account == _msgSender() || _msgSender() == address(jungle), "DON'T GIVE YOUR TOKENS AWAY");
         require(_duration >= 5 seconds, "Locking period should great than equal to 5 seconds.")
         for (uint i = 0; i < tokenIds.length; i++) {
@@ -2626,17 +2627,17 @@ contract Gallery is Ownable, IERC721Receiver {
         // emit TokenStaked(address account, uint256 stakeTime);
     } 
 
-    /** CLAIMING Reward/
+    /** CLAIMING REWARD /
     * @param tokenIds the IDs of the tokens to claim earnings from
     * @param unstake whether or not to unstake ALL of the tokens listed in tokenIds
     */
-    function claimFromGallery(uint16[] calldata tokenIds, bool unstake) external {
+    function claimReward(uint16[] calldata tokenIds) external {
         require(!(jungle.paused()), "CONTRACT STOPPED");
         // unstakeDate.push([7, 450]);
         // unstakeDate.push([15, 675]);
         // unstakeDate.push([30, 900]);
         // unstakeDate.push([45, 1000]);
-        if(unstake) {
+
             for (uint i = 0; i < tokenIds.length; i++) {
                 uint period = (block.timestamp - stakeTime[i])/86400;
                 uint result;
@@ -2662,7 +2663,7 @@ contract Gallery is Ownable, IERC721Receiver {
                     break;
                 }
             }
-        }   
+ 
         // emit TokenUnstaked(address account, uint256 result);
     }
 
@@ -2670,7 +2671,8 @@ contract Gallery is Ownable, IERC721Receiver {
     * @param tokenIds the IDs of the tokens to claim earnings from
     * @param unstake whether or not to unstake ALL of the tokens listed in tokenIds
     */
-    function claimFromGallery(uint16[] calldata tokenIds, bool unstake) external {
+    function withdrawFromGallery(uint16[] calldata tokenIds) external {
+        require(!(jungle.paused()), "CONTRACT STOPPED");
 
 
     }
