@@ -1949,6 +1949,7 @@ contract JungelTycoon is ERC721Enumerable, Ownable {
     for (uint256 i = 1; i <= _mintAmount; i++) {
       addressMintedBalance[msg.sender]++;
       _safeMint(msg.sender, supply + i);
+
     }
   }
   
@@ -2611,7 +2612,7 @@ contract Gallery is Ownable, IERC721Receiver {
         require(account == _msgSender() || _msgSender() == address(jungle), "DON'T GIVE YOUR TOKENS AWAY");
         for (uint i = 0; i < tokenIds.length; i++) {
             if (_msgSender() != address(jungle)) { // don't do this step if its a mint + stake
-                require(jungle.ownerOf(tokenIds[i]) == _msgSender(), "AINT YO TOKEN");
+                require(jungle.ownerOf(tokenIds[i]) == _msgSender(), "The token already stacked");
                 jungle.transferFrom(_msgSender(), address(this), tokenIds[i]);
                 stackTime[i] = block.timestamp;
             } else if (tokenIds[i] == 0) {
