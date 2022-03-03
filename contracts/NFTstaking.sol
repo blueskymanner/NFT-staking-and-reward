@@ -2571,8 +2571,9 @@ pragma solidity ^0.8.0;
 contract Gallery is Ownable, IERC721Receiver {
     
     // contract events
-    // event TokenStaked(address _account, uint256 _stakeTime);
-    // event TokenUnstaked(address _account, uint256 _result);
+    event TokenStaked(address _account, uint256 _duration);
+    event TokenClaimed(address _account, uint256 _result);
+    event TokenWithdrawn(uint16[] _unexpiredTokens);
 
     // reference to the JungelTycoon NFT contract
     JungelTycoon jungle;
@@ -2586,15 +2587,15 @@ contract Gallery is Ownable, IERC721Receiver {
     // maps tokenId to locking duration to stake
     mapping(uint256 => uint256) public duration;
 
+    // maps account to staked tokens
+    mapping(address => uint16[]) public stakedTokens;
+
     // uint256[2][4] public unstakeDate = [[7, 450], [15, 675], [30, 900], [45, 1000]];
     uint256[][] public unstakeDate = [[7, 450], [15, 675], [30, 900], [45, 1000]];
 
-    // uint256 public totalJTTEarned;
-    // uint256 public unaccountedRewards = 0; 
-    // uint256 public lastClaimTimestamp;
+    // array of unexpired NFTs when unstaking
+    uint16[] public unexpiredTokens;
 
-    // emergency rescue to allow unstaking without any checks but without $JTT
-    bool public rescueEnabled = false;
 
     /**
     * @param _jungle reference to the JungelTycoon NFT contract
@@ -2605,79 +2606,119 @@ contract Gallery is Ownable, IERC721Receiver {
         jtt = JTT(_jtt);
     }
 
-    /** STAKING
+    /* STAKING /
     * adds JungelTycoon NFTs to the Gallery
     * @param account the address of the staker
     * @param tokenIds the IDs of the NFTs to stake
+    * @param duration the locking duration of the NFTs to stake
     */
     function addToGallery(address account, uint16[] calldata tokenIds, uint _duration) external {
         require(!(jungle.paused()), "CONTRACT STOPPED");
         require(account == _msgSender() || _msgSender() == address(jungle), "DON'T GIVE YOUR TOKENS AWAY");
-        require(_duration >= 5 seconds, "Locking period should great than equal to 5 seconds.")
+        require(_duration >= 5, "Locking duration should great than equal to 5 seconds.");
         for (uint i = 0; i < tokenIds.length; i++) {
             if (_msgSender() != address(jungle)) { // don't do this step if its a mint + stake
                 require(jungle.ownerOf(tokenIds[i]) == _msgSender(), "The token already staked");
                 jungle.transferFrom(_msgSender(), address(this), tokenIds[i]);
+
+                stakedTokens[account].push(tokenIds[i]);
                 stakeTime[i] = block.timestamp;
                 duration[i] = _duration;
             } else if (tokenIds[i] == 0) {
                 continue; // there may be gaps in the array for stolen tokens
             }
         }
-        // emit TokenStaked(address account, uint256 stakeTime);
+
+        emit TokenStaked(account, _duration);
     } 
 
-    /** CLAIMING REWARD /
-    * @param tokenIds the IDs of the tokens to claim earnings from
-    * @param unstake whether or not to unstake ALL of the tokens listed in tokenIds
+    /* CLAIMING REWARD /
+    * @param account the user address of claim earnings from
     */
-    function claimReward(uint16[] calldata tokenIds) external {
+    function claimReward(address account) external {
         require(!(jungle.paused()), "CONTRACT STOPPED");
-        // unstakeDate.push([7, 450]);
-        // unstakeDate.push([15, 675]);
-        // unstakeDate.push([30, 900]);
-        // unstakeDate.push([45, 1000]);
+        require(account == _msgSender() || _msgSender() == address(jungle), "DON'T CLAIM NON OWNER'S REWARDS");
+        require(stakedTokens[account].length > 0, "Have no staked tokens");
+        
+        uint[] memory periods = new uint[](stakedTokens[account].length);
+        uint result;
+        for (uint i = 0; i < stakedTokens[account].length; i++) {
+            periods[i] = (block.timestamp - stakeTime[i])/86400;
 
-            for (uint i = 0; i < tokenIds.length; i++) {
-                uint period = (block.timestamp - stakeTime[i])/86400;
-                uint result;
-                for(uint j = 0; j < unstakeDate.length; j++) {
-                    if (period > unstakeDate[j][0]) {
-                        if (j == unstakeDate.length - 1) {
-                            result = period * unstakeDate[j][1];
-                        } else {
-                            continue;
-                        }
-                    } else if (period == unstakeDate[j][0]) {
-                        result = period * unstakeDate[j][1];
+            if (periods[i] <= unstakeDate[0][0]) {
+                result = result + periods[i] * unstakeDate[0][1];
+            } else if ((unstakeDate[0][0] < periods[i]) && (periods[i] <= unstakeDate[1][0])) {
+                result = result + periods[i] * unstakeDate[1][1];
+            } else if ((unstakeDate[1][0] < periods[i]) && (periods[i] <= unstakeDate[2][0])) {
+                result = result + periods[i] * unstakeDate[2][1];
+            } else {
+                result = result + periods[i] * unstakeDate[3][1];
+            }
+            stakeTime[i] = block.timestamp;
+        }
+        jtt.mint(_msgSender(), result/100);
+
+        emit TokenClaimed(account, result/100);
+
+            // for (uint i = 0; i < tokenIds.length; i++) {
+            //     uint period = (block.timestamp - stakeTime[i])/86400;
+            //     uint result;
+            //     for(uint j = 0; j < unstakeDate.length; j++) {
+            //         if (period > unstakeDate[j][0]) {
+            //             if (j == unstakeDate.length - 1) {
+            //                 result = period * unstakeDate[j][1];
+            //             } else {
+            //                 continue;
+            //             }
+            //         } else if (period == unstakeDate[j][0]) {
+            //             result = period * unstakeDate[j][1];
+            //         } else {
+            //             if (j == 0) {
+            //                 break;
+            //             } else {
+            //                 result = period * unstakeDate[j - 1][1];
+            //             }
+            //         }
+            //     }
+            //      jtt.mint(_msgSender(), result/100);
+            //      stakeTime[i] = block.timestamp;
+            // }
+    }
+
+    /* UNSTAKING /
+    * @param tokenIds the IDs of the tokens to claim earnings from
+    */
+    function withdrawFromGallery(address account, uint16[] calldata tokenIds) external {
+        require(!(jungle.paused()), "CONTRACT STOPPED");
+        require(account == _msgSender() || _msgSender() == address(jungle), "DON'T UNSTAKE NON OWNER'S TOKENS");
+
+        for (uint i = 0; i < tokenIds.length; i++) {
+            for (uint j = 0; j < stakedTokens[account].length; j++) {
+                if (tokenIds[i] == stakedTokens[account][j]) {
+                    if ((block.timestamp - stakeTime[i]) >= duration[i]) {
+                        jungle.safeTransferFrom(address(this), _msgSender(), tokenIds[i], ""); // send back NFTs
+                        _removeToken(account, j);
                     } else {
-                        if (j == 0) {
-                            break;
-                        } else {
-                            result = period * unstakeDate[j - 1][1];
-                        }
+                        unexpiredTokens.push(tokenIds[i]);
                     }
-                    jungle.safeTransferFrom(address(this), _msgSender(), tokenIds[i], ""); // send back NFTs
-                    jtt.mint(_msgSender(), result/100);
-                    // jtt.transferFrom(fromAddress, _msgSender(), result);
-                    break;
                 }
             }
- 
-        // emit TokenUnstaked(address account, uint256 result);
+        }
+        
+        emit TokenWithdrawn(unexpiredTokens);
     }
 
-    /** UNSTAKING /
-    * @param tokenIds the IDs of the tokens to claim earnings from
-    * @param unstake whether or not to unstake ALL of the tokens listed in tokenIds
-    */
-    function withdrawFromGallery(uint16[] calldata tokenIds) external {
-        require(!(jungle.paused()), "CONTRACT STOPPED");
+    function _removeToken(address _account, uint _id) internal {
+        require(_id < stakedTokens[_account].length, "Staked tokens array index is out of bound.");
+        
+        for (uint i = _id; i < stakedTokens[_account].length - 1; i++) {
+            stakedTokens[_account][i] = stakedTokens[_account][i+1];
+        }
 
-
+        stakedTokens[_account].pop();
     }
 
-    // receive() external payable {}
+    receive() external payable {}
 
     function onERC721Received(
             address,
